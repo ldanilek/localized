@@ -3,12 +3,35 @@ import Head from 'next/head'
 import Image from 'next/image'
 import styles from '../styles/Home.module.css'
 import { useQuery, useMutation } from '../convex/_generated/react'
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
+import React, { useState } from 'react';
+
+interface LocalizedTextProps {
+  language: string,
+  text: string,
+}
+
+const LocalizedText = (props: LocalizedTextProps) => {
+  const [cachedLocalized, setCachedLocalized] = useState(props.text);
+  const localizedText = useQuery('getLocalized', props.text, props.language);
+  const setLocalized = useMutation('setLocalized');
+  useEffect(() => {
+    if (localizedText === null) {
+      setLocalized(props.text, localizedText, props.language);
+    } else if (localizedText) {
+      setCachedLocalized(localizedText);
+    }
+  }, [localizedText]);
+
+  return (<span>{localizedText ?? cachedLocalized}</span>);
+};
 
 const Home: NextPage = () => {
-  const counter = useQuery('getCounter', 'clicks') ?? 0
-  const increment = useMutation('incrementCounter')
-  const incrementByOne = useCallback(() => increment('clicks', 1), [increment])
+  const [language, setLanguage] = useState("English");
+  const localize = (text: string) => {
+    return <LocalizedText text={text} language={language} />;
+  };
+  const languages = useQuery('getLanguages') ?? [];
 
   return (
     <div className={styles.container}>
@@ -20,30 +43,17 @@ const Home: NextPage = () => {
 
       <main className={styles.main}>
         <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js</a> with{' '}
-          <a href="https://convex.dev">Convex</a>
+          {localize("Welcome!")}
         </h1>
-
-        <p className={styles.description}>
-          {"Here's the counter:"} {counter}
-        </p>
-        <button className={styles.button} onClick={incrementByOne}>
-          Add One!
-        </button>
+        <p>{localize("Our company builds widgets!")}</p>
+        <p>{localize("Where is the library?")}</p>
+        <select onChange={(e) => setLanguage(e.target.value)}>
+          {languages.map((language) =>
+            <option value={language} key={language}>{language}</option>
+          )}
+        </select>
       </main>
 
-      <footer className={styles.footer}>
-        <a
-          href="https://www.convex.dev/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <span className={styles.logo}>
-            <Image src="/convex.svg" alt="Convex Logo" width={90} height={18} />
-          </span>
-        </a>
-      </footer>
     </div>
   )
 }
